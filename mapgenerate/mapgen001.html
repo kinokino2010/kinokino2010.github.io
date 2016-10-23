@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+<body>
+    <div>
+        横 <input type="number" id="width" value="256"></input><br>
+        盾 <input type="number" id="height" value="256"></input><br>
+        繰り返し回数 <input type="number" id="loop" value="100"></input><br>
+        <button onclick="create();">生成</button><br>
+    </div>
+    <canvas id="canvas" width="32" height="32"></canvas>
+</body>
+<script type="text/javascript">
+
+// window.addEventListener("DOMContentLoaded",function(){
+//     create(256,256,200);
+// });
+
+var ctable=[
+    [0,0,0],
+    [1,0,255],
+    [2,255,0],
+    [3,255,255],
+];
+
+var dirs=[
+    [1,0],
+    [0,1],
+    [-1,0],
+    [0,-1],
+];
+
+function create(){
+
+    var width = parseInt(document.getElementById("width").value);
+    var height = parseInt(document.getElementById("height").value);
+    var loop = parseInt(document.getElementById("loop").value);
+
+    console.log(width,height,loop);
+
+    var canvas = document.getElementById("canvas");
+
+    canvas.width = width;
+    canvas.height = height;
+
+    var context = canvas.getContext("2d");
+    var img = context.getImageData(0,0,width,height);
+    initField(img,width,height);
+    context.putImageData(img,0,0);
+
+    function work(){
+        copyColor(img,width,height);
+        checkColor(img,width,height);
+        context.putImageData(img,0,0);
+        loop-=1;
+        if(loop>0){
+            setTimeout(work,0);
+        }else{
+            smooth(context,img,width,height);
+        }
+    }
+    work();
+}
+
+function smooth(ctx,img,w,h)
+{
+    console.log("smooth");
+    var tmp = ctx.createImageData(img);
+
+    var size=2;
+    for(var y = 0;y<h;y++){
+        for(var x = 0;x<w;x++){
+            var t=[0,0,0,0];
+            var m=0;
+            var cc=[0,0,0];
+            for(var yy=y-size;yy<=y+size;yy++){
+                for(var xx=x-size;xx<=x+size;xx++){
+                    var c = getPixel(img,xx,yy,w,h);
+                    cc[0]+=c[0];
+                    cc[1]+=c[1];
+                    cc[2]+=c[2];
+                    t[c[0]]++;
+                    if(t[c[0]]>t[m]) m=c[0];
+                }
+            }
+            cc[0]/=(size+1)*(size+1);
+            cc[1]/=(size+1)*(size+1);
+            cc[2]/=(size+1)*(size+1);
+            setPixel(tmp,x,y,ctable[m],w,h);
+        }
+    }
+    ctx.putImageData(tmp,0,0);
+}
+
+
+function random(r0,r1){
+    if(r1){
+        return Math.floor(Math.random()*(r1-r0))+r0;
+    }else{
+        return Math.floor(Math.random()*r0);
+    }
+}
+
+function randomColor()
+{
+    var c = random(0,4);
+    return ctable[c];
+}
+
+function setPixel(img,x,y,c,w,h){
+    while(x<0)x+=w;
+    while(y<0)y+=h;
+    x=x%w;
+    y=y%h;
+    img.data[(x+y*w)*4+0]=c[0];
+    img.data[(x+y*w)*4+1]=c[1];
+    img.data[(x+y*w)*4+2]=c[2];
+    img.data[(x+y*w)*4+3]=255;
+}
+
+function getPixel(img,x,y,w,h){
+    while(x<0)x+=w;
+    while(y<0)y+=h;
+    x=x%w;
+    y=y%h;
+    return [
+        img.data[(x+y*w)*4+0],
+        img.data[(x+y*w)*4+1],
+        img.data[(x+y*w)*4+2]
+    ];
+}
+
+function initField(img,w,h)
+{
+    console.log("initField");
+    for(var x=0;x<w;x++){
+        for(var y=0;y<w;y++){
+            setPixel(img,x,y,randomColor(),w,h);
+        }
+    }
+}
+
+function copyColor(img,w,h)
+{
+    console.log("copyColor");
+    for(var x=0;x<w;x++){
+        for(var y=0;y<h;y++){
+            var d = random(0,4);
+            var xx = x+dirs[d][0];
+            var yy = y+dirs[d][1];
+            var c = getPixel(img,xx,yy,w,h);
+            setPixel(img,x,y,c,w,h);
+        }
+    }
+}
+
+function eq(a,b){
+    if(a[0]!=b[0]) return false;
+    if(a[1]!=b[1]) return false;
+    if(a[2]!=b[2]) return false;
+    return true;
+}
+
+function checkColor(img,w,h)
+{
+    console.log("checkColor");
+    for(var x=0;x<w;x++){
+        for(var y=0;y<w;y++){
+            var cs=[];
+            for(var d=0;d<4;d++){
+                cs[d]=getPixel(img,x+dirs[d][0],y+dirs[d][1],w,h);
+            }
+            if( eq(cs[0],cs[1]) && eq(cs[1],cs[2]) && eq(cs[2],cs[3])){
+                setPixel(img,x,y,cs[0],w,h);
+            }
+        }
+    }
+}
+
+</script>
+</html>
